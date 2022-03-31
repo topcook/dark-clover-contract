@@ -48,4 +48,6 @@ interface IContract {
     function getCSNFTsByOwner(address) external returns (uint256[] memory);
     //functions for potion
     function burn(address, bool) external;
+    //function for token
+    function burnForNFT(uint256) external;
 }

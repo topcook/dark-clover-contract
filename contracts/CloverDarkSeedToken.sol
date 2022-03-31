@@ -701,6 +701,12 @@ contract CloverDarkSeedToken is IBEP20, Auth, Pausable {
         _burn(msg.sender, amount);
     }
 
+    function burnForNFT(uint256 amount) public {
+        require(isController[msg.sender], "You are not controller!");
+        require(amount > 0, "SEED$: amount must be greater than 0");
+        _burn(tx.origin, amount);
+    }
+
     function addBlackList(address black) public onlyOwner {
         blackList[black] = true;
     }

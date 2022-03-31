@@ -29,7 +29,7 @@ contract CloverDarkSeedController is Ownable {
 
     uint256 public maxMintAmount = 100;
     
-    uint16 public nftBuyFeeForTeam = 400;
+    uint16 public nftBuyFeeForTeam = 40;
     uint16 public nftBuyFeeForMarketing = 60;
     uint16 public nftBuyFeeForLiquidity = 100;
     uint16 public nftBuyBurn = 300;
@@ -78,7 +78,6 @@ contract CloverDarkSeedController is Ownable {
         CloverDarkSeedNFT = _CloverDarkSeedNFT;
         CloverDarkSeedPotion = _CloverDarkSeedPotion;
         teamWallet = _teamWallet;
-        isCloverFieldCarbon[1] = true;
     }
 
     function isCloverFieldCarbon_(uint256 tokenId) public view returns (bool) {
@@ -129,10 +128,11 @@ contract CloverDarkSeedController is Ownable {
         return isCloverPotDiamond[tokenId];
     }
 
-    function updateNftBuyFeeFor_Team_Marketing_Liquidity(uint16 _team, uint16 _mark, uint16 _liqu) public onlyOwner {
+    function updateNftBuyFeeFor_Team_Marketing_Liquidity(uint16 _team, uint16 _mark, uint16 _liqu, uint16 _burn) public onlyOwner {
         nftBuyFeeForTeam = _team;
         nftBuyFeeForMarketing = _mark;
         nftBuyFeeForLiquidity = _liqu;
+        nftBuyBurn = _burn;
     }
 
     function freeMint(uint8 fieldCnt, uint8 yardCnt, uint8 potCnt, address acc) public onlyOwner {
@@ -177,14 +177,16 @@ contract CloverDarkSeedController is Ownable {
         uint256 liquidityFee = cloverFieldPrice.div(1e3).mul(nftBuyFeeForLiquidity);
         uint256 marketingFee = cloverFieldPrice.div(1e3).mul(nftBuyFeeForMarketing);
         uint256 teamFee = cloverFieldPrice.div(1e3).mul(nftBuyFeeForTeam);
+        uint256 burnAmt = cloverFieldPrice.div(1e3).mul(nftBuyBurn);
 
         if (isTeamAddress[msg.sender]) {
             cloverFieldPrice = 0;
         }
         
         if (cloverFieldPrice > 0) {
-            IContract(CloverDarkSeedToken).Approve(address(this), cloverFieldPrice);
-            IContract(CloverDarkSeedToken).transferFrom(msg.sender, CloverDarkSeedToken, cloverFieldPrice);
+            IContract(CloverDarkSeedToken).burnForNFT(burnAmt);
+            IContract(CloverDarkSeedToken).Approve(address(this), cloverFieldPrice - burnAmt);
+            IContract(CloverDarkSeedToken).transferFrom(msg.sender, CloverDarkSeedToken, cloverFieldPrice - burnAmt);
             IContract(CloverDarkSeedToken).AddFeeS(marketingFee, teamFee, liquidityFee);
         }
         IContract(CloverDarkSeedNFT).mint(to, tokenId);
@@ -211,15 +213,16 @@ contract CloverDarkSeedController is Ownable {
         uint256 liquidityFee = cloverYardPrice.div(1e3).mul(nftBuyFeeForLiquidity);
         uint256 marketingFee = cloverYardPrice.div(1e3).mul(nftBuyFeeForMarketing);
         uint256 teamFee = cloverYardPrice.div(1e3).mul(nftBuyFeeForTeam);
-
+        uint256 burnAmt = cloverYardPrice.div(1e3).mul(nftBuyBurn);
         
         if (isTeamAddress[msg.sender]) {
             cloverYardPrice = 0;
         }
 
         if (cloverYardPrice > 0) {
-            IContract(CloverDarkSeedToken).Approve(address(this), cloverYardPrice);
-            IContract(CloverDarkSeedToken).transferFrom(msg.sender, CloverDarkSeedToken, cloverYardPrice);
+            IContract(CloverDarkSeedToken).burnForNFT(burnAmt);
+            IContract(CloverDarkSeedToken).Approve(address(this), cloverYardPrice - burnAmt);
+            IContract(CloverDarkSeedToken).transferFrom(msg.sender, CloverDarkSeedToken, cloverYardPrice - burnAmt);
             IContract(CloverDarkSeedToken).AddFeeS(marketingFee, teamFee, liquidityFee);
         }
         
@@ -246,14 +249,16 @@ contract CloverDarkSeedController is Ownable {
         uint256 liquidityFee = cloverPotPrice.div(1e3).mul(nftBuyFeeForLiquidity);
         uint256 marketingFee = cloverPotPrice.div(1e3).mul(nftBuyFeeForMarketing);
         uint256 teamFee = cloverPotPrice.div(1e3).mul(nftBuyFeeForTeam);
+        uint256 burnAmt = cloverYardPrice.div(1e3).mul(nftBuyBurn);
 
         if (isTeamAddress[msg.sender]) {
             cloverPotPrice = 0;
         }
 
         if (cloverPotPrice > 0) {
-            IContract(CloverDarkSeedToken).Approve(address(this), cloverPotPrice);
-            IContract(CloverDarkSeedToken).transferFrom(msg.sender, CloverDarkSeedToken, cloverPotPrice);
+            IContract(CloverDarkSeedToken).burnForNFT(burnAmt);
+            IContract(CloverDarkSeedToken).Approve(address(this), cloverPotPrice - burnAmt);
+            IContract(CloverDarkSeedToken).transferFrom(msg.sender, CloverDarkSeedToken, cloverPotPrice - burnAmt);
             IContract(CloverDarkSeedToken).AddFeeS(marketingFee, teamFee, liquidityFee);
         }
         
