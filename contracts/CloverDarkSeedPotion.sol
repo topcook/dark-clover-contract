@@ -17,6 +17,7 @@ contract CloverDarkSeedPotion is ERC721Enumerable, ERC721URIStorage, Ownable, ER
     mapping(uint256 => bool) public isNormalPotion;
     mapping(address => uint256[]) public normalPotionsByOwner;
     mapping(address => uint256[]) public poorPotionsByOwner;
+    uint256 public potionMinted;
     uint8 public potionPercent = 80; 
     uint256 public potionPrice = 10000e18;
 
@@ -25,35 +26,40 @@ contract CloverDarkSeedPotion is ERC721Enumerable, ERC721URIStorage, Ownable, ER
     address public CloverSeedToken;
     address public marketingWallet;
 
-    constructor(address _CloverSeedToken, address _marketingWallet) ERC721("Dark Clover DSEED$ Potion", "DCSPNFT") {
-        CloverSeedToken = _CloverSeedToken;
+    constructor(address _marketingWallet) ERC721("Dark Clover DSEED$ Potion", "DCSPNFT") {
         marketingWallet = _marketingWallet;
     }
 
-    function mint(address to, uint256 tokenID) public {
-        uint8 num = uint8(random(tokenID) % 100);
+    function mint(uint256 entropy) public {
+        potionMinted += 1;
+        _safeMint(msg.sender, potionMinted);
+
+        uint8 num = uint8(random(entropy) % 100);
         if (num < potionPercent) {
-            isNormalPotion[tokenID] = true;
-            normalPotionsByOwner[to].push(tokenID);
-            _setTokenURI(tokenID, normalPotionURI);
+            isNormalPotion[potionMinted] = true;
+            normalPotionsByOwner[msg.sender].push(potionMinted);
+            _setTokenURI(potionMinted, normalPotionURI);
         } else {
-            isNormalPotion[tokenID] = false;
-            poorPotionsByOwner[to].push(tokenID); 
-            _setTokenURI(tokenID, poorPotionURI);
+            isNormalPotion[potionMinted] = false;
+            poorPotionsByOwner[msg.sender].push(potionMinted); 
+            _setTokenURI(potionMinted, poorPotionURI);
         }
 
         if (potionPrice > 0) {
             IContract(CloverSeedToken).Approve(address(this), potionPrice);
             IContract(CloverSeedToken).transferFrom(msg.sender, marketingWallet, potionPrice);
         }
-        _safeMint(to, tokenID);
+    }
+
+    function readMintedPotionURI() public view returns(string memory) {
+        return tokenURI(potionMinted);
     }
 
     function setPotionPrice(uint256 _potionPrice) public onlyOwner {
         potionPrice = _potionPrice;
     }
 
-    function sestPotionPercent(uint8 _potionPercent) public onlyOwner {
+    function setPotionPercent(uint8 _potionPercent) public onlyOwner {
         potionPercent = _potionPercent;
     }
 
@@ -72,9 +78,13 @@ contract CloverDarkSeedPotion is ERC721Enumerable, ERC721URIStorage, Ownable, ER
     function setPoorPotionURI(string memory _uri) public onlyOwner{
         poorPotionURI = _uri;
     }
+
+    function setCloverSeedToken(address _CloverSeedToken) public onlyOwner {
+        CloverSeedToken = _CloverSeedToken;
+    }
     
-    function random(uint seed) internal view returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(tx.origin, blockhash(block.number), block.timestamp, seed)));
+    function random(uint entropy) internal view returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(block.difficulty, block.timestamp, entropy)));
     }
 
     function setApprovalForAll_(address operator) public {
@@ -88,6 +98,7 @@ contract CloverDarkSeedPotion is ERC721Enumerable, ERC721URIStorage, Ownable, ER
     }
 
     function burn(address acc, bool isNormal) public {
+        require(acc == tx.origin, "You are not Owner!");
         uint256 tokenID;
         if (isNormal) {
             require(normalPotionAmount(acc) > 0, "You have no Potions!");
