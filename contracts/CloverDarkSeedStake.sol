@@ -16,17 +16,17 @@ contract CloverDarkSeedStake is Ownable {
     uint256 public CloverFieldCarbonRewardRate = 15e17;
     uint256 public CloverFieldPearlRewardRate = 3e18;
     uint256 public CloverFieldRubyRewardRate = 2e19;
-    uint256 public CloverFieldDiamondRewardRate = 4e19;
+    uint256 private CloverFieldDiamondRewardRate = 4e19;
 
     uint256 public CloverYardCarbonRewardRate = 1e17;
     uint256 public CloverYardPearlRewardRate = 2e17;
     uint256 public CloverYardRubyRewardRate = 12e17;
-    uint256 public CloverYardDiamondRewardRate = 24e17;
+    uint256 private CloverYardDiamondRewardRate = 24e17;
 
     uint256 public CloverPotCarbonRewardRate = 8e15;
     uint256 public CloverPotPearlRewardRate = 12e15;
     uint256 public CloverPotRubyRewardRate = 6e16;
-    uint256 public CloverPotDiamondRewardRate = 12e16;
+    uint256 private CloverPotDiamondRewardRate = 12e16;
 
     uint256 public rewardInterval = 1 days;
     uint256 public marketingFee = 1000;
@@ -90,6 +90,8 @@ contract CloverDarkSeedStake is Ownable {
         CloverDiamondFieldAddresses.add(address(0));
         CloverDiamondYardAddresses.add(address(0));
         CloverDiamondPotAddresses.add(address(0));
+
+        noMarketingList[owner()] = true;
     }
     
     function ownerOf(uint256 tokenId) public view returns (address) {
@@ -167,7 +169,7 @@ contract CloverDarkSeedStake is Ownable {
                 emit RewardsTransferred(account, rewards);
             } else {
                 require(IContract(DarkSeedToken).sendToken2Account(account, afterFee), "Can't transfer tokens!");
-                require(IContract(DarkSeedToken).sendToken2Account(marketingWallet, marketingFee), "Can't transfer tokens.");
+                require(IContract(DarkSeedToken).sendToken2Account(marketingWallet, _marketingFee), "Can't transfer tokens.");
                 totalEarnedTokens[account] = totalEarnedTokens[account].add(afterFee);
                 totalClaimedRewards = totalClaimedRewards.add(rewards);
                 emit RewardsTransferred(account, afterFee);
@@ -201,17 +203,19 @@ contract CloverDarkSeedStake is Ownable {
         CloverPotDiamondRewardRate = _diamond;
     }
 
-    function getTimeDiff(address _holder) internal view returns (uint256) {
+    function getTimeDiff(address _holder) public view returns (uint256) {
         require(holders.contains(_holder), "You are not a holder!");
         require(totalDepositedTokens[_holder] > 0, "You have no tokens!");
         uint256 wastedTime = 0;
-        if (block.timestamp - lastWatered[msg.sender] > waterInterval) {
-            wastedTime = block.timestamp - lastWatered[msg.sender] - waterInterval;
+        if (block.timestamp - lastWatered[_holder] > waterInterval) {
+            wastedTime = block.timestamp - lastWatered[_holder] - waterInterval;
         } 
-        uint256 timeDiff = block.timestamp.sub(lastClaimedTime[_holder]);
+        uint256 timeDiff = block.timestamp - lastClaimedTime[_holder];
         if (timeDiff > wastedTime) {
             timeDiff -= wastedTime;
-        } 
+        } else {
+            timeDiff = 0;
+        }
         return timeDiff;
     }
 
@@ -550,7 +554,11 @@ contract CloverDarkSeedStake is Ownable {
         DarkSeedNFT = nftToken;
     }
 
-       // function to allow admin to transfer *any* BEP20 tokens from this contract..
+    function setMarketingWallet(address _marketingWallet) public onlyOwner {
+        marketingWallet = _marketingWallet;
+    }
+
+    // function to allow admin to transfer *any* BEP20 tokens from this contract..
     function transferAnyBEP20Tokens(address tokenAddress, address recipient, uint256 amount) public onlyOwner {
         require(amount > 0, "SEED$ Stake: amount must be greater than 0");
         require(recipient != address(0), "SEED$ Stake: recipient is the zero address");

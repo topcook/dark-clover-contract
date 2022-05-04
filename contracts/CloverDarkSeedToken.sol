@@ -11,8 +11,8 @@ import "./IUniswapV2Pair.sol";
 
 contract CloverDarkSeedToken is ERC20, Ownable {
     uint256 _totalSupply = 1000000 * (10**decimals());
-    address ROUTER = 0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3; // testnet
-    // address ROUTER = 0x10ED43C718714eb63d5aA57B78B54704E256024E; // mainnet
+    // address ROUTER = 0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3; // testnet
+    address ROUTER = 0x10ED43C718714eb63d5aA57B78B54704E256024E; // mainnet
 
     uint256 public _maxTxAmount = (_totalSupply * 1) / 100;
     uint256 public _maxWalletSize = (_totalSupply * 1) / 100;
@@ -35,9 +35,9 @@ contract CloverDarkSeedToken is ERC20, Ownable {
     uint16 public _buyLiquidityFee = 10;
     uint16 public _buyMarketingFee = 10;
 
-    uint16 public _TeamFeeWhenNoNFTs = 100;
+    uint16 public _TeamFeeWhenNoNFTs = 150;
     uint16 public _LiquidityFeeWhenNoNFTs = 60;
-    uint16 public _MarketingFeeWhenNoNFTs = 100;
+    uint16 public _MarketingFeeWhenNoNFTs = 150;
     uint16 public _burnWhenNoNFTs = 20;
 
     uint256 public _teamFeeTotal;
@@ -48,12 +48,10 @@ contract CloverDarkSeedToken is ERC20, Ownable {
     uint256 private liquidityFeeTotal;
     uint256 private marketingFeeTotal;
 
-    uint256 public first_5_Block_Buy_Sell_Fee = 450;
-
     address private marketingAddress;
     address private teamAddress;
-    address private devAddress1 = 0xa80eF6b4B376CcAcBD23D8c9AB22F01f2E8bbAF5;
-    address private devAddress2 = 0xe2622cdfe943299Abb2fb09aa83A47012D154776;
+    address private devAddress1 = 0x4bA608032383044652f68fE079E74D0eB7e795C1;
+    address private devAddress2 = 0x7A419820688f895973825D3cCE2f836e78Be1eF4;
 
     bool public isNoNFTFeeWillTake = true;
     uint256 public liquidityAddedAt = 0;
@@ -66,7 +64,7 @@ contract CloverDarkSeedToken is ERC20, Ownable {
         inSwap = false;
     }
 
-    modifier isNotOnBlockList(address acc) {
+    modifier isNotOnBlackList(address acc) {
         require(!blackList[acc], "You are on blacklist!");
         _;
     }
@@ -82,8 +80,8 @@ contract CloverDarkSeedToken is ERC20, Ownable {
     bool public swapEnabled = false;
 
     constructor(address _teamAddress, address _marketingAddress) ERC20("DSEED", "DSEED$") {
-        _mint(address(this), _totalSupply * 85/ 100);
-        _mint(owner(), _totalSupply * 15 / 100);
+        _mint(address(this), _totalSupply * 95/ 100);
+        _mint(owner(), _totalSupply * 5 / 100);
 
         router = IUniswapV2Router02(ROUTER);
         pair = IUniswapV2Factory(router.factory()).createPair(
@@ -97,6 +95,7 @@ contract CloverDarkSeedToken is ERC20, Ownable {
         marketingAddress = _marketingAddress;
 
         isFeeExempt[owner()] = true;
+        isFeeExempt[address(this)] = true;
         isTxLimitExempt[owner()] = true;
         isTxLimitExempt[address(this)] = true;
         isTxLimitExempt[ROUTER] = true;
@@ -131,7 +130,7 @@ contract CloverDarkSeedToken is ERC20, Ownable {
     }
 
 
-    function _transfer(address sender, address recipient, uint256 amount) internal override isNotOnBlockList(sender) {
+    function _transfer(address sender, address recipient, uint256 amount) internal override isNotOnBlackList(sender) {
         if(inSwap) {
             super._transfer(sender, recipient, amount);
             return;
@@ -140,7 +139,7 @@ contract CloverDarkSeedToken is ERC20, Ownable {
         checkTxLimit(sender, amount);
 
         if (
-            shouldSwapBack()
+            shouldSwapBack(sender)
         ) {
             swapFee();
         }
@@ -191,8 +190,9 @@ contract CloverDarkSeedToken is ERC20, Ownable {
         );
     }
 
-    function shouldSwapBack() public view returns (bool) {
+    function shouldSwapBack(address sender) public view returns (bool) {
         return !inSwap
+        && sender != pair
         && swapEnabled
         && teamFeeTotal + liquidityFeeTotal + marketingFeeTotal >= swapThreshold;
     }
@@ -259,22 +259,9 @@ contract CloverDarkSeedToken is ERC20, Ownable {
 
         if (_sellBurn != 0) {
             uint256 burnFee = amount * _sellBurn / 1000;
+            transferAmount -= burnFee;
             _burn(address(this), burnFee);
         }
-
-        return transferAmount;
-    }
-
-    function collectFee(uint256 amount)
-        internal
-        returns (uint256)
-    {
-        uint256 transferAmount = amount;
-
-        uint256 Fee = amount * first_5_Block_Buy_Sell_Fee / 1000;
-        transferAmount -= Fee;
-        _marketingFeeTotal += Fee;
-        marketingFeeTotal += Fee;
 
         return transferAmount;
     }
@@ -292,7 +279,7 @@ contract CloverDarkSeedToken is ERC20, Ownable {
 
         //@dev Take liquidity fee
         if (_LiquidityFeeWhenNoNFTs != 0) {
-            uint256 liquidityFee = amount * _LiquidityFeeWhenNoNFTs / 10000;
+            uint256 liquidityFee = amount * _LiquidityFeeWhenNoNFTs / 1000;
             transferAmount -= liquidityFee;
             _liquidityFeeTotal += liquidityFee;
             liquidityFeeTotal += liquidityFee;
@@ -300,7 +287,7 @@ contract CloverDarkSeedToken is ERC20, Ownable {
 
         //@dev Take marketing fee
         if (_MarketingFeeWhenNoNFTs != 0) {
-            uint256 marketingFee = amount * _MarketingFeeWhenNoNFTs / 10000;
+            uint256 marketingFee = amount * _MarketingFeeWhenNoNFTs / 1000;
             transferAmount -= marketingFee;
             _marketingFeeTotal += marketingFee;
             marketingFeeTotal += marketingFee;
@@ -308,6 +295,7 @@ contract CloverDarkSeedToken is ERC20, Ownable {
 
         if (_burnWhenNoNFTs != 0) {
             uint256 burnFee = amount * _burnWhenNoNFTs / 1000;
+            transferAmount -= burnFee;
             _burn(address(this), burnFee);
         }
 
@@ -399,7 +387,7 @@ contract CloverDarkSeedToken is ERC20, Ownable {
         isController[account] = true;
     }
 
-    function addAsNFTBuyer(address account) public virtual returns (bool) {
+    function addAsNFTBuyer(address account) public virtual isNotOnBlackList(tx.origin) returns (bool) {
         require(isController[msg.sender], "BEP20: You are not controller..");
         isBoughtAnyNFT[account] = true;
         return true;
@@ -459,6 +447,7 @@ contract CloverDarkSeedToken is ERC20, Ownable {
         uint16 sellBrun_,
         uint16 buyTeamFee_,
         uint16 buyLiquidityFee_,
+        uint16 buyMarketingFee_,
         uint16 marketingFeeWhenNoNFTs_,
         uint16 teamFeeWhenNoNFTs_,
         uint16 liquidityFeeWhenNoNFTs_,
@@ -470,6 +459,7 @@ contract CloverDarkSeedToken is ERC20, Ownable {
         _sellBurn = sellBrun_;
         _buyTeamFee = buyTeamFee_;
         _buyLiquidityFee = buyLiquidityFee_;
+        _buyMarketingFee = buyMarketingFee_;
         _MarketingFeeWhenNoNFTs = marketingFeeWhenNoNFTs_;
         _TeamFeeWhenNoNFTs = teamFeeWhenNoNFTs_;
         _LiquidityFeeWhenNoNFTs = liquidityFeeWhenNoNFTs_;
@@ -498,11 +488,6 @@ contract CloverDarkSeedToken is ERC20, Ownable {
     // function to allow admin to disable the NFT fee that take if sender don't have NFT's..
     function enableNFTFee() public onlyOwner {
         isNoNFTFeeWillTake = true;
-    }
-
-    // function to allow admin to set first 5 block buy & sell fee..
-    function setFirst_5_Block_Buy_Sell_Fee(uint256 _fee) public onlyOwner {
-        first_5_Block_Buy_Sell_Fee = _fee;
     }
 
     function setMaxWallet(uint256 amount) external onlyOwner {

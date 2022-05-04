@@ -38,9 +38,9 @@ contract CloverDarkSeedController is Ownable {
     uint256 public cloverYardPrice = 1e19;
     uint256 public cloverPotPrice = 1e18;
 
-    uint8 public fieldPercentByPotion = 60;
-    uint8 public yardPercentByPotion = 38;
-    uint8 public potPercentByPotion = 2;
+    uint8 private fieldPercentByPotion = 2;
+    uint8 private yardPercentByPotion = 28;
+    uint8 private potPercentByPotion = 70;
 
     uint256 public tokenAmountForPoorPotion = 5e17;
     bool public isContractActivated = false;
@@ -74,6 +74,7 @@ contract CloverDarkSeedController is Ownable {
         CloverDarkSeedNFT = _CloverDarkSeedNFT;
         CloverDarkSeedPotion = _CloverDarkSeedPotion;
         teamWallet = _teamWallet;
+        isTeamAddress[owner()] = true;
     }
 
     function isCloverFieldCarbon_(uint256 tokenId) public view returns (bool) {
@@ -134,21 +135,21 @@ contract CloverDarkSeedController is Ownable {
     function freeMint(uint8 fieldCnt, uint8 yardCnt, uint8 potCnt, address acc) public onlyOwner {
         require(totalCloverFieldMinted + fieldCnt <= totalCloverFieldCanMint, "Controller: All Clover Field Has Minted..");
         require(totalCloverYardMinted + yardCnt <= totalCloverYardCanMint, "Controller: All Clover Yard Has Minted..");
-        require(totalCloverPotMinted + potCnt <= totalCloverPotMinted, "Controller: All Clover Pot Has Minted..");
+        require(totalCloverPotMinted + potCnt <= totalCloverPotCanMint, "Controller: All Clover Pot Has Minted..");
 
         uint256 tokenID;
         for(uint8 i = 0; i < fieldCnt; i++) {
-            IContract(CloverDarkSeedPicker).randomNumber(block.timestamp);
+            IContract(CloverDarkSeedPicker).randomNumber(i);
             tokenID = totalCloverFieldMinted + 1;
             IContract(CloverDarkSeedNFT).mint(acc, tokenID);
         } 
         for(uint8 i = 0; i < yardCnt; i++) {
-            IContract(CloverDarkSeedPicker).randomNumber(block.timestamp);
+            IContract(CloverDarkSeedPicker).randomNumber(i + fieldCnt);
             tokenID = _totalCloverYardMinted + 1;
             IContract(CloverDarkSeedNFT).mint(acc, tokenID);
         }  
         for(uint8 i = 0; i < potCnt; i++) {
-            IContract(CloverDarkSeedPicker).randomNumber(block.timestamp);
+            IContract(CloverDarkSeedPicker).randomNumber(i + fieldCnt + yardCnt);
             tokenID = _totalCloverPotMinted + 1;
             IContract(CloverDarkSeedNFT).mint(acc, tokenID);
         }      
@@ -267,7 +268,7 @@ contract CloverDarkSeedController is Ownable {
     function mintUsingPotion(uint256 entropy, bool isNormal) public {
         if (isNormal) {
             uint256 tokenID;
-            uint256 random = IContract(CloverDarkSeedPicker).randomNumber(entropy) % 100;
+            uint8 random = uint8(IContract(CloverDarkSeedPicker).randomNumber(entropy) % 100);
             if (random < potPercentByPotion) {
                 tokenID = _totalCloverPotMinted + 1;
             } else if (random < potPercentByPotion + yardPercentByPotion) {
@@ -420,6 +421,10 @@ contract CloverDarkSeedController is Ownable {
 
     function setCloverDarkPotion(address _CloverDarkSeedPotion) public onlyOwner {
         CloverDarkSeedPotion = _CloverDarkSeedPotion;
+    }
+
+    function setTeamWallet(address _teamWallet) public onlyOwner {
+        teamWallet = _teamWallet;
     }
 
     // function to allow admin to transfer *any* BEP20 tokens from this contract..
