@@ -45,7 +45,7 @@ Guidance of uploadTraits(traitType, traitIds, traits) function
                         3 - 6 - 3, 6, 8, 12, 11, 13
                         4 - 6 - 3, 4, 11, 12, 14, 19
 
- -  common background : common traitType 0
+ #  common background : common traitType 0
     rarity : [0, 1, 2, 3, 4, 5]
     traitData : 
         -rarity 0
